@@ -1,2 +1,4 @@
 # operating-systems-engineering
-Operating Systems Engineering in C
+
+> ![WARNING]
+> This repository is unfinished. Keep your expectations low.
