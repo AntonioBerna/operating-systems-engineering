@@ -8,7 +8,7 @@
   <section|Traccia>
 
   Implementare una programma in linguaggio C che riceva in input, tramite
-  <cpp|argv[]>, il nome di un file <math|F> ed <math|n> stringhe
+  <cpp|*argv[]>, il nome di un file <math|F> ed <math|n> stringhe
   <math|s<rsub|1>,\<ldots\>,s<rsub|n>> (con <math|n\<geqslant\>1>). Per ogni
   stringa <math|s<rsub|i>> dovrà essere attivato un nuovo thread
   <math|T<rsub|i>>, che fungerà da gestore della stringa <math|s<rsub|i>>. Il
