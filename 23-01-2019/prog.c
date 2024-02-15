@@ -130,18 +130,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-#ifdef __APPLE__
-	signal(SIGINT, &file_printer);
-	// struct sigaction sa;
-	// sa.sa_handler = file_printer;
-	// if (sigaction(SIGINT, &sa, NULL) == -1) {
-	// 	perror("sigaction");
-	// 	exit(EXIT_FAILURE);
-	// }
-#elif __linux__
-	// TODO
-	signal(SIGINT, &file_printer);
-#endif
+	signal(SIGINT, file_printer);
 
 	pthread_t new_thread;
 	for (int i = 0; i < no_threads; ++i) {
