@@ -15,6 +15,7 @@
 #include <assert.h>
 
 char *filename;
+int no_threads;
 char buffer[BUFSIZ];
 
 typedef struct {
@@ -42,14 +43,7 @@ void *search_string(void *arg) {
 	while (1) {
 		sops.sem_num = thread_no;
 		sops.sem_op = -1;
-try_again_op3:
-		if (semop(sem_is_ready, &sops, 1) == -1) {
-			if (errno == EINTR) {
-				goto try_again_op3;
-			}
-			perror("semop");
-			exit(EXIT_FAILURE);
-		}
+		if (semop(sem_is_ready, &sops, 1) == -1) continue;
 		
 		// start of critical section
 
@@ -65,14 +59,7 @@ try_again_op3:
 
 		sops.sem_num = thread_no;
 		sops.sem_op = 1;
-try_again_op4:
-		if (semop(sem_go_ahead, &sops, 1) == -1) {
-			if (errno == EINTR) {
-				goto try_again_op4;
-			}
-			perror("semop");
-			exit(EXIT_FAILURE);
-		}
+		if (semop(sem_go_ahead, &sops, 1) == -1) continue;
 	}
 	
 	return NULL;
@@ -89,6 +76,22 @@ void file_printer(int sig_no) {
 	puts("--- OUTPUT PRINTED ---");
 }
 
+void free_all_resources(int sig_no) {
+	(void)sig_no;
+	
+	for (int i = 0; i < no_threads; ++i) {
+		semctl(sem_go_ahead, i, IPC_RMID);
+		semctl(sem_is_ready, i, IPC_RMID);
+	}
+
+#ifdef DEBUG
+	puts("The free of all resources has been completed.");
+	puts("Check this using \"ipcs -a\" command.");
+#endif
+
+	exit(EXIT_SUCCESS);
+}
+
 int main(int argc, char **argv) {
 	if (argc < 3) {
 		fprintf(stderr, "Usage: %s <filename> <str-1> ... <str-N>\n", *argv);
@@ -96,7 +99,7 @@ int main(int argc, char **argv) {
 	}
 
 	filename = argv[1];
-	int no_threads = argc - 2;
+	no_threads = argc - 2;
 	
 	int fd = open(filename, O_CREAT | O_TRUNC | O_RDWR, 0660);
 	if (fd == -1) {
@@ -131,6 +134,7 @@ int main(int argc, char **argv) {
 	}
 
 	signal(SIGINT, file_printer);
+	signal(SIGQUIT, free_all_resources);
 
 	pthread_t new_thread;
 	for (int i = 0; i < no_threads; ++i) {
@@ -149,12 +153,12 @@ int main(int argc, char **argv) {
 
 	while (1) {
 		for (int i = 0; i < no_threads; ++i) {
-try_again_op1:
+try_again_wait_ops:
 			sops.sem_num = i;
 			sops.sem_op = -1;
 			if (semop(sem_go_ahead, &sops, 1) == -1) {
 				if (errno == EINTR) {
-					goto try_again_op1;
+					goto try_again_wait_ops;
 				}
 				perror("semop");
 				exit(EXIT_FAILURE);
@@ -183,22 +187,17 @@ try_again_fgets:
 		// end of critical section
 		
 		for (int i = 0; i < no_threads; ++i) {
-try_again_op2:
+try_again_post_ops:
 			sops.sem_num = i;
 			sops.sem_op = 1;
 			if (semop(sem_is_ready, &sops, 1) == -1) {
 				if (errno == EINTR) {
-					goto try_again_op2;
+					goto try_again_post_ops;
 				}
 				perror("semop");
 				exit(EXIT_FAILURE);
 			}
 		}
-	}
-	
-	for (int i = 0; i < no_threads; ++i) {
-		semctl(sem_go_ahead, i, IPC_RMID);
-		semctl(sem_is_ready, i, IPC_RMID);
 	}
 	
 	return 0;
