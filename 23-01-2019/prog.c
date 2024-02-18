@@ -40,10 +40,20 @@ void *search_string(void *arg) {
 
 	struct sembuf sops;
 
+	sigset_t set;
+	sigfillset(&set);
+	if (sigprocmask(SIG_BLOCK, &set, NULL) == -1) {
+		perror("sigprocmask");
+		exit(EXIT_FAILURE);
+	}
+
 	while (1) {
 		sops.sem_num = thread_no;
 		sops.sem_op = -1;
-		if (semop(sem_is_ready, &sops, 1) == -1) continue;
+		if (semop(sem_is_ready, &sops, 1) == -1) {
+			perror("semop3");
+			exit(EXIT_FAILURE);
+		}
 		
 		// start of critical section
 
@@ -59,7 +69,10 @@ void *search_string(void *arg) {
 
 		sops.sem_num = thread_no;
 		sops.sem_op = 1;
-		if (semop(sem_go_ahead, &sops, 1) == -1) continue;
+		if (semop(sem_go_ahead, &sops, 1) == -1) {
+			perror("semop");
+			exit(EXIT_FAILURE);
+		}
 	}
 	
 	return NULL;
@@ -153,12 +166,12 @@ int main(int argc, char **argv) {
 
 	while (1) {
 		for (int i = 0; i < no_threads; ++i) {
-try_again_wait_ops:
+try_again_wait_op:
 			sops.sem_num = i;
 			sops.sem_op = -1;
 			if (semop(sem_go_ahead, &sops, 1) == -1) {
 				if (errno == EINTR) {
-					goto try_again_wait_ops;
+					goto try_again_wait_op;
 				}
 				perror("semop");
 				exit(EXIT_FAILURE);
@@ -187,12 +200,12 @@ try_again_fgets:
 		// end of critical section
 		
 		for (int i = 0; i < no_threads; ++i) {
-try_again_post_ops:
+try_again_post_op:
 			sops.sem_num = i;
 			sops.sem_op = 1;
 			if (semop(sem_is_ready, &sops, 1) == -1) {
 				if (errno == EINTR) {
-					goto try_again_post_ops;
+					goto try_again_post_op;
 				}
 				perror("semop");
 				exit(EXIT_FAILURE);
