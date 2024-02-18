@@ -36,14 +36,28 @@
   venga colpito esso dovrà riversare su standard-output il contenuto corrente
   del file <math|F>.
 
-  <section|Soluzione>
+  <section|Note sulla soluzione proposta>
 
-  Una possibile soluzione è riportata nel file <cpp|prog.c> e, per generare
-  il file eseguibile, è possibile utilizzare il comando <shell|./build.sh> o
-  il comando <shell|./build.sh debug> in base al livello di interazione
-  uomo-macchina che si desidera. Chiaramente le funzionalità in modalità
-  Debug aiutano a capire meglio cosa sta succedendo. Per utilizzare
-  l'eseguibile appena generato è possibile utilizzare il comando
+  Due possibili soluzioni sono riportate nel file <cpp|prog.c>, infatti sono
+  presenti due implementazioni per la gestione dei segnali richiesti. La
+  prima utilizza la funzione <cpp|void (*signal(int, void (*)(int)))(int)>,
+  mentre la seconda utilizza la struttura <cpp|struct sigaction> insieme alla
+  system call <cpp|int sigaction(int, struct sigaction *, struct sigaction
+  *)>. Sarà sufficiente commentare una delle due porzioni di codice per poter
+  testare l'eseguibile finale.
+
+  Mi sono preso la libertà di gestire anche il segnale <cpp|SIGQUIT>
+  (l'equivalente di <shell|ctrl+\\> indispensabile per la terminazione del
+  programma nel momento in cui gestendo il segnale <cpp|SIGINT> il programma
+  non termina), il quale verrà gestito da una routine per la liberazione dei
+  semafori allocati. Ricordo che questo check si può fare durante lo sviluppo
+  del codice utilizzando il comando <shell|ipcs -s>.
+
+  Per generare il file eseguibile, è possibile utilizzare il comando
+  <shell|./build.sh> o il comando <shell|./build.sh debug> in base al livello
+  di interazione uomo-macchina che si desidera. Chiaramente le funzionalità
+  in modalità Debug aiutano a capire meglio cosa sta succedendo. Per
+  utilizzare l'eseguibile appena generato è possibile utilizzare il comando
   <shell|./build/prog> che mostrerà a schermo il seguente output:
 
   <\shell-code>
