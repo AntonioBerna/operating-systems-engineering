@@ -35,7 +35,7 @@ void *search_string(void *arg) {
 	free(my_arg);
 
 #ifdef DEBUG
-	printf("Thread no. %d handles the string %s\n", thread_no, string);
+	printf("Thread no. %d handles the string \"%s\"\n", thread_no, string);
 #endif
 
 	struct sembuf sops;
@@ -59,7 +59,7 @@ try_again_wait:
 
 		if (strcmp(buffer, string) == 0) {
 #ifdef DEBUG
-			printf("Thread no. %d matched the string %s\n", thread_no, string);
+			printf("Thread no. %d matched the string \"%s\"\n", thread_no, string);
 #endif
 			strncpy(buffer, "*", sizeof(short));
 			for (size_t i = 0; i < strlen(string) - 1; ++i) strncat(buffer, "*", sizeof(short));
@@ -197,9 +197,9 @@ int main(int argc, char **argv) {
 
 	while (1) {
 		for (int i = 0; i < no_threads; ++i) {
-try_again_wait_op:
 			sops.sem_num = i;
 			sops.sem_op = -1;
+try_again_wait_op:
 			if (semop(sem_go_ahead, &sops, 1) == -1) {
 				if (errno == EINTR) {
 					goto try_again_wait_op;
@@ -231,9 +231,9 @@ try_again_fgets:
 		// end of critical section
 		
 		for (int i = 0; i < no_threads; ++i) {
-try_again_post_op:
 			sops.sem_num = i;
 			sops.sem_op = 1;
+try_again_post_op:
 			if (semop(sem_is_ready, &sops, 1) == -1) {
 				if (errno == EINTR) {
 					goto try_again_post_op;
