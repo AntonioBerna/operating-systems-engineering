@@ -153,8 +153,32 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	signal(SIGINT, file_printer);
-	signal(SIGQUIT, free_all_resources);
+	// if (signal(SIGINT, file_printer) == SIG_ERR) {
+	// 	perror("signal");
+	// 	exit(EXIT_FAILURE);
+	// }
+
+	// if (signal(SIGQUIT, free_all_resources) == SIG_ERR) {
+	// 	perror("signal");
+	// 	exit(EXIT_FAILURE);
+	// }
+
+	struct sigaction sa;
+	sa.sa_handler = &file_printer;
+	sa.sa_flags = SA_RESTART;
+	sigfillset(&sa.sa_mask);
+
+	if (sigaction(SIGINT, &sa, NULL) == -1) {
+		perror("sigaction");
+		exit(EXIT_FAILURE);
+	}
+
+	sa.sa_handler = &free_all_resources;
+
+	if (sigaction(SIGQUIT, &sa, NULL) == -1) {
+		perror("sigaction");
+		exit(EXIT_FAILURE);
+	}
 
 	pthread_t new_thread;
 	for (int i = 0; i < no_threads; ++i) {
