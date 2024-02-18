@@ -40,18 +40,18 @@ void *search_string(void *arg) {
 
 	struct sembuf sops;
 
-	sigset_t set;
-	sigfillset(&set);
-	if (sigprocmask(SIG_BLOCK, &set, NULL) == -1) {
-		perror("sigprocmask");
-		exit(EXIT_FAILURE);
-	}
-
 	while (1) {
 		sops.sem_num = thread_no;
 		sops.sem_op = -1;
+try_again_wait:
 		if (semop(sem_is_ready, &sops, 1) == -1) {
-			perror("semop3");
+			if (errno == EINTR) {
+				goto try_again_wait;
+			}
+
+			if (errno == EIDRM) break;
+			
+			perror("semop");
 			exit(EXIT_FAILURE);
 		}
 		
@@ -69,7 +69,14 @@ void *search_string(void *arg) {
 
 		sops.sem_num = thread_no;
 		sops.sem_op = 1;
+try_again_post:
 		if (semop(sem_go_ahead, &sops, 1) == -1) {
+			if (errno == EINTR) {
+				goto try_again_post;
+			}
+
+			if (errno == EIDRM) break;
+
 			perror("semop");
 			exit(EXIT_FAILURE);
 		}
@@ -99,7 +106,7 @@ void free_all_resources(int sig_no) {
 
 #ifdef DEBUG
 	puts("The free of all resources has been completed.");
-	puts("Check this using \"ipcs -a\" command.");
+	puts("Check this using \"ipcs -s\" command.");
 #endif
 
 	exit(EXIT_SUCCESS);

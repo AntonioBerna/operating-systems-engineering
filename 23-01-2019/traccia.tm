@@ -1,4 +1,4 @@
-<TeXmacs|2.1.2>
+<TeXmacs|2.1>
 
 <style|generic>
 
@@ -32,7 +32,7 @@
 
   Inoltre, qualora già esistente, il file <math|F> dovrà essere troncato (o
   rigenerato) all'atto del lancio dell'applicazione. Infine, l'applicazione
-  dovra' gestire il segnale <cpp|SIGINT> in modo tale che quando il processo
+  dovrà gestire il segnale <cpp|SIGINT> in modo tale che quando il processo
   venga colpito esso dovrà riversare su standard-output il contenuto corrente
   del file <math|F>.
 
@@ -68,8 +68,6 @@
   <\collection>
     <associate|auto-1|<tuple|1|1>>
     <associate|auto-2|<tuple|2|1>>
-    <associate|footnote-1|<tuple|1|1>>
-    <associate|footnr-1|<tuple|1|1>>
   </collection>
 </references>
 
