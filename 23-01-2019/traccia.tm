@@ -43,15 +43,27 @@
   prima utilizza la funzione <cpp|void (*signal(int, void (*)(int)))(int)>,
   mentre la seconda utilizza la struttura <cpp|struct sigaction> insieme alla
   system call <cpp|int sigaction(int, struct sigaction *, struct sigaction
-  *)>. Sarà sufficiente commentare una delle due porzioni di codice per poter
-  testare l'eseguibile finale.
+  *)>. In particolare sarà sufficiente cambiare il valore della seguente
+  macro:
+
+  <\cpp-code>
+    #if 0 // change this value
+
+    \ \ \ \ // use signal()
+
+    #else
+
+    \ \ \ \ // use struct sigaction and sigaction()
+
+    #endif
+  </cpp-code>
 
   Mi sono preso la libertà di gestire anche il segnale <cpp|SIGQUIT>
   (l'equivalente di <shell|ctrl+\\> indispensabile per la terminazione del
-  programma nel momento in cui gestendo il segnale <cpp|SIGINT> il programma
-  non termina), il quale verrà gestito da una routine per la liberazione dei
-  semafori allocati. Ricordo che questo check si può fare durante lo sviluppo
-  del codice utilizzando il comando <shell|ipcs -s>.
+  programma nel momento in cui, gestendo il segnale <cpp|SIGINT>, il
+  programma non termina), il quale verrà gestito da una routine per la
+  liberazione dei semafori System V allocati. Ricordo che questo check si può
+  fare durante lo sviluppo del codice utilizzando il comando <shell|ipcs -s>.
 
   Per generare il file eseguibile, è possibile utilizzare il comando
   <shell|./build.sh> o il comando <shell|./build.sh debug> in base al livello
@@ -92,8 +104,8 @@
       <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-1><vspace|0.5fn>
 
-      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|2<space|2spc>Soluzione>
-      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|2<space|2spc>Note
+      sulla soluzione proposta> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-2><vspace|0.5fn>
     </associate>
   </collection>
