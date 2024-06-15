@@ -17,6 +17,7 @@
 char *filename;
 int no_threads;
 char buffer[BUFSIZ];
+pthread_mutex_t buffer_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct {
 	int thread_no;
@@ -43,65 +44,66 @@ void *search_string(void *arg) {
 	while (1) {
 		sops.sem_num = thread_no;
 		sops.sem_op = -1;
-try_again_wait:
-		if (semop(sem_is_ready, &sops, 1) == -1) {
-			if (errno == EINTR) {
-				goto try_again_wait;
-			}
-
-			if (errno == EIDRM) break;
-			
+		while (semop(sem_is_ready, &sops, 1) == -1) {
+			if (errno == EINTR) continue;
+			if (errno == EIDRM) pthread_exit(NULL);
 			perror("semop");
 			exit(EXIT_FAILURE);
 		}
 		
 		// start of critical section
+		pthread_mutex_lock(&buffer_mutex);
 
 		if (strcmp(buffer, string) == 0) {
 #ifdef DEBUG
 			printf("Thread no. %d matched the string \"%s\"\n", thread_no, string);
 #endif
-			strncpy(buffer, "*", sizeof(short));
-			for (size_t i = 0; i < strlen(string) - 1; ++i) strncat(buffer, "*", sizeof(short));
+			memset(buffer, '*', strlen(buffer));
 		}
 		
+		pthread_mutex_unlock(&buffer_mutex);
 		// end of critical section
 
 		sops.sem_num = thread_no;
 		sops.sem_op = 1;
-try_again_post:
-		if (semop(sem_go_ahead, &sops, 1) == -1) {
-			if (errno == EINTR) {
-				goto try_again_post;
-			}
-
-			if (errno == EIDRM) break;
-
-			perror("semop");
-			exit(EXIT_FAILURE);
-		}
+		while (semop(sem_go_ahead, &sops, 1) == -1) {
+            if (errno == EINTR) continue;
+            if (errno == EIDRM) pthread_exit(NULL);
+            perror("semop");
+            exit(EXIT_FAILURE);
+        }
 	}
 	
 	return NULL;
 }
 
 void file_printer(int sig_no) {
-	(void)sig_no;
-	
-	char command[BUFSIZ];
-	snprintf(command, sizeof(command), "cat %s", filename);
-	
-	puts("--- OVERALL OUTPUT ---");
-	system(command);
-	puts("--- OUTPUT PRINTED ---");
+    (void)sig_no;
+
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        perror("fopen");
+        return;
+    }
+
+    puts("--- OVERALL OUTPUT ---");
+    char line[BUFSIZ];
+    while (fgets(line, sizeof(line), file) != NULL) {
+        fputs(line, stdout);
+    }
+    puts("--- OUTPUT PRINTED ---");
+
+    if (fclose(file) == EOF) {
+        perror("fclose");
+    }
 }
 
 void free_all_resources(int sig_no) {
 	(void)sig_no;
 	
 	for (int i = 0; i < no_threads; ++i) {
-		semctl(sem_go_ahead, i, IPC_RMID);
-		semctl(sem_is_ready, i, IPC_RMID);
+		semctl(sem_go_ahead, i, IPC_RMID, 0);
+		semctl(sem_is_ready, i, IPC_RMID, 0);
 	}
 
 #ifdef DEBUG
@@ -114,7 +116,7 @@ void free_all_resources(int sig_no) {
 
 int main(int argc, char **argv) {
 	if (argc < 3) {
-		fprintf(stderr, "Usage: %s <filename> <str-1> ... <str-N>\n", *argv);
+		fprintf(stderr, "Usage: %s [filename] [str-1] ... [str-N]\n", *argv);
 		exit(EXIT_FAILURE);
 	}
 
@@ -127,7 +129,7 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	strncpy(buffer, "\0", sizeof(char));
+	memset(buffer, 0, sizeof(buffer));
 
 	sem_go_ahead = semget(IPC_PRIVATE, no_threads, IPC_CREAT | IPC_EXCL | 0660);
 	if (sem_go_ahead == -1) {
@@ -146,7 +148,6 @@ int main(int argc, char **argv) {
 			perror("semctl");
 			exit(EXIT_FAILURE);
 		}
-
 		if (semctl(sem_is_ready, i, SETVAL, 0) == -1) {
 			perror("semctl");
 			exit(EXIT_FAILURE);
@@ -185,7 +186,10 @@ int main(int argc, char **argv) {
 	pthread_t new_thread;
 	for (int i = 0; i < no_threads; ++i) {
 		thread_args_ptr_t new_arg = calloc(1, sizeof(thread_args_t));
-		assert(new_arg != NULL && "Buy More RAM lol");
+		if (new_arg == NULL) {
+			perror("calloc");
+			exit(EXIT_FAILURE);
+		}
 		new_arg->thread_no = i;
 		new_arg->string = argv[i + 2];
 		
@@ -201,48 +205,48 @@ int main(int argc, char **argv) {
 		for (int i = 0; i < no_threads; ++i) {
 			sops.sem_num = i;
 			sops.sem_op = -1;
-try_again_wait_op:
-			if (semop(sem_go_ahead, &sops, 1) == -1) {
-				if (errno == EINTR) {
-					goto try_again_wait_op;
-				}
-				perror("semop");
-				exit(EXIT_FAILURE);
-			}
+			while (semop(sem_go_ahead, &sops, 1) == -1) {
+                if (errno == EINTR) continue;
+                perror("semop");
+                exit(EXIT_FAILURE);
+            }
 		}
 		
 		// start of critical section
+		pthread_mutex_lock(&buffer_mutex);
 
 		if (strcmp(buffer, "\0") != 0) {
 			if (dprintf(fd, "%s\n", buffer) < 0) {
 				perror("dprintf");
+				close(fd);
 				exit(EXIT_FAILURE);
 			}
+			memset(buffer, 0, sizeof(buffer));
 		}
-
-try_again_fgets:
-		if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
-			buffer[strcspn(buffer, "\n")] = '\0';
-		}
+		
+		while (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+            if (errno == EINTR) continue;
+            perror("fgets");
+            exit(EXIT_FAILURE);
+        }
+		buffer[strcspn(buffer, "\n")] = '\0';
 
 		if (strlen(buffer) >= sizeof(buffer)) {
 			fprintf(stderr, "The string you provided is too large! Please provide a shorter one.\n");
-			goto try_again_fgets;
+			continue;
 		}
-	
+
+		pthread_mutex_unlock(&buffer_mutex);
 		// end of critical section
 		
 		for (int i = 0; i < no_threads; ++i) {
 			sops.sem_num = i;
 			sops.sem_op = 1;
-try_again_post_op:
-			if (semop(sem_is_ready, &sops, 1) == -1) {
-				if (errno == EINTR) {
-					goto try_again_post_op;
-				}
-				perror("semop");
-				exit(EXIT_FAILURE);
-			}
+			while (semop(sem_is_ready, &sops, 1) == -1) {
+                if (errno == EINTR) continue;
+                perror("semop");
+                exit(EXIT_FAILURE);
+            }
 		}
 	}
 	

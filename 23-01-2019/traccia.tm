@@ -1,4 +1,4 @@
-<TeXmacs|2.1>
+<TeXmacs|2.1.4>
 
 <style|generic>
 
@@ -46,17 +46,19 @@
   *)>. In particolare sarà sufficiente cambiare il valore della seguente
   macro:
 
-  <\cpp-code>
-    #if 0 // change this value
+  <\numbered>
+    <\cpp-code>
+      #if 0 // change this value
 
-    \ \ \ \ // use signal()
+      \ \ \ \ // use signal()
 
-    #else
+      #else
 
-    \ \ \ \ // use struct sigaction and sigaction()
+      \ \ \ \ // use struct sigaction and sigaction()
 
-    #endif
-  </cpp-code>
+      #endif
+    </cpp-code>
+  </numbered>
 
   Mi sono preso la libertà di gestire anche il segnale <cpp|SIGQUIT>
   (l'equivalente di <shell|ctrl+\\> indispensabile per la terminazione del
@@ -72,12 +74,14 @@
   utilizzare l'eseguibile appena generato è possibile utilizzare il comando
   <shell|./build/prog> che mostrerà a schermo il seguente output:
 
-  <\shell-code>
-    $ ./build/prog
+  <\numbered>
+    <\shell-code>
+      $ ./build/prog
 
-    Usage: ./build/prog \<less\>filename\<gtr\> \<less\>str-1\<gtr\> ...
-    \<less\>str-N\<gtr\>
-  </shell-code>
+      Usage: ./build/prog \<less\>filename\<gtr\> \<less\>str-1\<gtr\> ...
+      \<less\>str-N\<gtr\>
+    </shell-code>
+  </numbered>
 
   In presenza di problematiche provare ad eseguire il comando <shell|chmod +x
   build.sh> e nuovamente il comando <shell|./build.sh> o il comando
