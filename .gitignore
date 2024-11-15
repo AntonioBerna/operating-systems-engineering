@@ -54,12 +54,5 @@ dkms.conf
 # Others
 .vscode/
 .DS_Store
-build/
-17-10-2019
-exams/
-others/
-sistemi_operativi/
-small-projects/
-solutions/
-system-v/
-tracce da rifare/
+bin/
+todo/
