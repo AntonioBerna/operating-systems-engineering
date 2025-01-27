@@ -32,11 +32,10 @@ static void ping(size_t id) {
         printf("(%ld) ping\n", ++i);
         sem_post(sems[(id + 1) % NUM_PROCESSES]);
     }
-    // Chiudi tutti i semafori
     for (size_t i = 0; i < NUM_PROCESSES; ++i) {
         sem_close(sems[i]);
     }
-    exit(0); // Usa exit() invece di _exit()
+    exit(0);
 }
 
 static void pong(size_t id) {
@@ -45,11 +44,10 @@ static void pong(size_t id) {
         printf("(%ld) pong\n", ++i);
         sem_post(sems[(id + 1) % NUM_PROCESSES]);
     }
-    // Chiudi tutti i semafori
     for (size_t i = 0; i < NUM_PROCESSES; ++i) {
         sem_close(sems[i]);
     }
-    exit(0); // Usa exit() invece di _exit()
+    exit(0);
 }
 
 static bool to_size_t(const char *buffer, size_t *value) {
@@ -70,7 +68,6 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // Apri i semafori
     for (size_t i = 0; i < NUM_PROCESSES; ++i) {
         char sem_name[64];
         snprintf(sem_name, sizeof(sem_name), "/ping_pong_semaphore_%zu", i);
@@ -82,7 +79,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    // Crea i processi figli
     for (size_t i = 0; i < NUM_PROCESSES; ++i) {
         pids[i] = fork();
         if (pids[i] == -1) {
@@ -100,12 +96,10 @@ int main(int argc, char **argv) {
         }
     }
 
-    // Attendi che i processi figli terminino
     for (size_t i = 0; i < NUM_PROCESSES; ++i) {
         waitpid(pids[i], NULL, 0);
     }
 
-    // Pulisci i semafori
     cleanup();
 
     return 0;
