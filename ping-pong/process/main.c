@@ -15,12 +15,28 @@ static size_t iterations;
 static pid_t pids[NUM_PROCESSES];
 static sem_t *sems[NUM_PROCESSES];
 
+static void cleanup() {
+    for (size_t i = 0; i < NUM_PROCESSES; ++i) {
+        if (sems[i] != SEM_FAILED) {
+            sem_close(sems[i]);
+            char sem_name[64];
+            snprintf(sem_name, sizeof(sem_name), "/ping_pong_semaphore_%zu", i);
+            sem_unlink(sem_name);
+        }
+    }
+}
+
 static void ping(size_t id) {
     for (size_t i = 0; i < iterations;) {
         sem_wait(sems[id]);
         printf("(%ld) ping\n", ++i);
         sem_post(sems[(id + 1) % NUM_PROCESSES]);
     }
+    // Chiudi tutti i semafori
+    for (size_t i = 0; i < NUM_PROCESSES; ++i) {
+        sem_close(sems[i]);
+    }
+    exit(0); // Usa exit() invece di _exit()
 }
 
 static void pong(size_t id) {
@@ -29,6 +45,11 @@ static void pong(size_t id) {
         printf("(%ld) pong\n", ++i);
         sem_post(sems[(id + 1) % NUM_PROCESSES]);
     }
+    // Chiudi tutti i semafori
+    for (size_t i = 0; i < NUM_PROCESSES; ++i) {
+        sem_close(sems[i]);
+    }
+    exit(0); // Usa exit() invece di _exit()
 }
 
 static bool to_size_t(const char *buffer, size_t *value) {
@@ -49,20 +70,24 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // Apri i semafori
     for (size_t i = 0; i < NUM_PROCESSES; ++i) {
         char sem_name[64];
         snprintf(sem_name, sizeof(sem_name), "/ping_pong_semaphore_%zu", i);
-        sems[i] = sem_open(sem_name, O_CREAT, 0644, (i == 0) ? 0 : 0);
+        sems[i] = sem_open(sem_name, O_CREAT | O_EXCL, 0644, (i == 0) ? 1 : 0); // Inizializza il primo semaforo a 1
         if (sems[i] == SEM_FAILED) {
             perror("sem_open");
+            cleanup();
             return 1;
         }
     }
 
+    // Crea i processi figli
     for (size_t i = 0; i < NUM_PROCESSES; ++i) {
         pids[i] = fork();
         if (pids[i] == -1) {
             perror("fork");
+            cleanup();
             return 1;
         }
 
@@ -75,20 +100,13 @@ int main(int argc, char **argv) {
         }
     }
 
-    // Start the ping-pong game.
-    sem_post(sems[0]);
-
+    // Attendi che i processi figli terminino
     for (size_t i = 0; i < NUM_PROCESSES; ++i) {
         waitpid(pids[i], NULL, 0);
     }
 
-    // Use `lsof | grep sem` command to check the semaphore status.
-    for (size_t i = 0; i < NUM_PROCESSES; ++i) {
-        char sem_name[64];
-        snprintf(sem_name, sizeof(sem_name), "/ping_pong_semaphore_%zu", i);
-        sem_close(sems[i]);
-        sem_unlink(sem_name);
-    }
+    // Pulisci i semafori
+    cleanup();
 
     return 0;
 }
