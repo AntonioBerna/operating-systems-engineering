@@ -50,9 +50,17 @@ static void *pong(void *arg) {
 
 static bool to_size_t(const char *buffer, size_t *value) {
     char *endptr;
+    size_t val;
+    if (*buffer == '-') {
+        return false;
+    }
     errno = 0;
-    *value = (size_t)strtol(buffer, &endptr, 0);
-    return !(errno == ERANGE || endptr == buffer || (*endptr && *endptr != '\n') || *value == SIZE_MAX);
+    val = strtoul(buffer, &endptr, 0);
+    if (errno == ERANGE || endptr == buffer || *endptr != '\0' || val > SIZE_MAX) {
+        return false;
+    }
+    *value = (size_t)val;
+    return true;
 }
 
 int main(int argc, char **argv) {
