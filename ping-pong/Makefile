@@ -22,7 +22,7 @@ dir:
 process: dir
 	$(CC) $(CFLAGS) $(CLIBS) $(PROCESS_SRC) $(SHARED_SRC) -I$(SHARED_INCLUDE) -o $(BINARY_DIR)$(PROCESS_TARGET)
 
-process_mem: process
+process_memcheck: process
 	@valgrind --leak-check=full --track-origins=yes $(BINARY_DIR)$(PROCESS_TARGET)
 
 thread: dir
