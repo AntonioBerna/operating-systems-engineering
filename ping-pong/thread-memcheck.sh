@@ -2,5 +2,5 @@
 
 for i in {1..10};
 do
-    valgrind --leak-check=full --track-origins=yes ./bin/multithread-ping-pong "$i";
+    valgrind --tool=helgrind --history-level=approx ./bin/multithread-ping-pong "$i";
 done
