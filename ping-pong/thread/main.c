@@ -1,17 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <semaphore.h>
 #include <stdbool.h>
 #include <errno.h>
 #include <stdint.h>
+
+#include "safe-sem.h"
 
 static size_t iterations;
 
 typedef struct {
     pthread_t thread;
     void *(*start_routine)(void *);
-    sem_t sem;
+    safe_sem_t sem;
 } thread_t;
 
 #define NUM_THREADS 2
@@ -22,9 +23,9 @@ static void *ping(void *arg) {
     size_t next = (id + 1) % NUM_THREADS;
     
     for (size_t i = 0; i < iterations;) {
-        sem_wait(&threads[id].sem);
-        printf("(%ld) ping\n", ++i);
-        sem_post(&threads[next].sem);
+        safe_sem_wait(&threads[id].sem);
+        printf("(%zu) ping\n", ++i);
+        safe_sem_post(&threads[next].sem);
     }
     return NULL;
 }
@@ -34,9 +35,9 @@ static void *pong(void *arg) {
     size_t next = (id + 1) % NUM_THREADS;
     
     for (size_t i = 0; i < iterations;) {
-        sem_wait(&threads[id].sem);
-        printf("(%ld) pong\n", ++i);
-        sem_post(&threads[next].sem);
+        safe_sem_wait(&threads[id].sem);
+        printf("(%zu) pong\n", ++i);
+        safe_sem_post(&threads[next].sem);
     }
     return NULL;
 }
@@ -61,11 +62,23 @@ int main(int argc, char **argv) {
 
     for (size_t i = 0; i < NUM_THREADS; ++i) {
         threads[i].start_routine = (i & 1) == 0 ? ping : pong;
-        sem_init(&threads[i].sem, 0, i == 0 ? 1 : 0);
+        if (safe_sem_init(&threads[i].sem, IPC_PRIVATE, 0, i == 0 ? 1 : 0) == -1) {
+            fprintf(stderr, "Failed to initialize semaphore %zu\n", i);
+            for (size_t j = 0; j < i; ++j) {
+                safe_sem_destroy(&threads[j].sem);
+            }
+            return 1;
+        }
     }
 
     for (size_t i = 0; i < NUM_THREADS; ++i) {
-        pthread_create(&threads[i].thread, NULL, threads[i].start_routine, (void *)i);
+        if (pthread_create(&threads[i].thread, NULL, threads[i].start_routine, (void *)i) != 0) {
+            perror("pthread_create");
+            for (size_t j = 0; j < NUM_THREADS; ++j) {
+                safe_sem_destroy(&threads[j].sem);
+            }
+            return 1;
+        }
     }
 
     for (size_t i = 0; i < NUM_THREADS; ++i) {
@@ -73,7 +86,7 @@ int main(int argc, char **argv) {
     }
 
     for (size_t i = 0; i < NUM_THREADS; ++i) {
-        sem_destroy(&threads[i].sem);
+        safe_sem_destroy(&threads[i].sem);
     }
 
     return 0;

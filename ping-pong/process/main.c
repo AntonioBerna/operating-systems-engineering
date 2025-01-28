@@ -5,47 +5,36 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <semaphore.h>
 #include <unistd.h>
-#include <fcntl.h>
+
+#include "safe-sem.h"
 
 static size_t iterations;
 
 #define NUM_PROCESSES 2
 static pid_t pids[NUM_PROCESSES];
-static sem_t *sems[NUM_PROCESSES];
+static safe_sem_t sems[NUM_PROCESSES];
 
 static void cleanup() {
     for (size_t i = 0; i < NUM_PROCESSES; ++i) {
-        if (sems[i] != SEM_FAILED) {
-            sem_close(sems[i]);
-            char sem_name[64];
-            snprintf(sem_name, sizeof(sem_name), "/ping_pong_semaphore_%zu", i);
-            sem_unlink(sem_name);
-        }
+        safe_sem_destroy(&sems[i]);
     }
 }
 
 static void ping(size_t id) {
     for (size_t i = 0; i < iterations;) {
-        sem_wait(sems[id]);
-        printf("(%ld) ping\n", ++i);
-        sem_post(sems[(id + 1) % NUM_PROCESSES]);
-    }
-    for (size_t i = 0; i < NUM_PROCESSES; ++i) {
-        sem_close(sems[i]);
+        safe_sem_wait(&sems[id]);
+        printf("(%zu) ping\n", ++i);
+        safe_sem_post(&sems[(id + 1) % NUM_PROCESSES]);
     }
     exit(0);
 }
 
 static void pong(size_t id) {
     for (size_t i = 0; i < iterations;) {
-        sem_wait(sems[id]);
-        printf("(%ld) pong\n", ++i);
-        sem_post(sems[(id + 1) % NUM_PROCESSES]);
-    }
-    for (size_t i = 0; i < NUM_PROCESSES; ++i) {
-        sem_close(sems[i]);
+        safe_sem_wait(&sems[id]);
+        printf("(%zu) pong\n", ++i);
+        safe_sem_post(&sems[(id + 1) % NUM_PROCESSES]);
     }
     exit(0);
 }
@@ -69,11 +58,8 @@ int main(int argc, char **argv) {
     }
 
     for (size_t i = 0; i < NUM_PROCESSES; ++i) {
-        char sem_name[64];
-        snprintf(sem_name, sizeof(sem_name), "/ping_pong_semaphore_%zu", i);
-        sems[i] = sem_open(sem_name, O_CREAT | O_EXCL, 0644, (i == 0) ? 1 : 0); // Inizializza il primo semaforo a 1
-        if (sems[i] == SEM_FAILED) {
-            perror("sem_open");
+        if (safe_sem_init(&sems[i], IPC_PRIVATE, 0, (i == 0) ? 1 : 0) == -1) {
+            fprintf(stderr, "Failed to initialize semaphore %zu\n", i);
             cleanup();
             return 1;
         }
