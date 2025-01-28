@@ -22,14 +22,8 @@ dir:
 process: dir
 	$(CC) $(CFLAGS) $(CLIBS) $(PROCESS_SRC) $(SHARED_SRC) -I$(SHARED_INCLUDE) -o $(BINARY_DIR)$(PROCESS_TARGET)
 
-process_memcheck: process
-	@valgrind --leak-check=full --track-origins=yes $(BINARY_DIR)$(PROCESS_TARGET)
-
 thread: dir
 	$(CC) $(CFLAGS) $(CLIBS) $(THREAD_SRC) $(SHARED_SRC) -I$(SHARED_INCLUDE) -o $(BINARY_DIR)$(THREAD_TARGET)
-
-thread_memcheck: thread
-	@valgrind --tool=helgrind --history-level=approx $(BINARY_DIR)$(THREAD_TARGET)
 
 clean:
 	$(RM) -r $(BINARY_DIR)
