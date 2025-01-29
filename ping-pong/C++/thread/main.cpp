@@ -36,6 +36,8 @@ static void worker(size_t id) {
                 std::cout << "(" << ++i << ") " << msg << "\n";
             }
 
+            lock.unlock();
+
             {
                 std::lock_guard<std::mutex> lock_next(threads[next].mtx);
                 threads[next].ready = true;
