@@ -9,7 +9,7 @@ def worker(lock_acquire, lock_release, text, iterations):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python script.py <iterations>")
+        print(f"Usage: python {sys.argv[0]} <iterations>")
         sys.exit(1)
     
     try:
@@ -17,7 +17,7 @@ if __name__ == "__main__":
         if iterations <= 0:
             raise ValueError
     except ValueError:
-        print("Il numero di iterazioni deve essere un intero positivo.")
+        print("The number of iterations must be a positive integer.")
         sys.exit(1)
 
     ping_lock = threading.Lock()
