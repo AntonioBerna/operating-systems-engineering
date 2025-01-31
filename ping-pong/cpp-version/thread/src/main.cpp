@@ -53,17 +53,15 @@ static void worker(size_t id) {
     }
 }
 
+#define BASE 10
 static bool to_size_t(const char *buffer, size_t *value) {
     char *endptr;
     if (*buffer == '-') return false;
     errno = 0;
-    size_t val = strtoul(buffer, &endptr, 0);
-    if (errno == ERANGE || endptr == buffer || *endptr != '\0' || val > SIZE_MAX) {
-        return false;
-    }
-    *value = static_cast<size_t>(val);
-    return true;
+    *value = strtoul(buffer, &endptr, BASE);
+    return !(errno == ERANGE || endptr == buffer || *endptr != '\0' || *value > SIZE_MAX);
 }
+#undef BASE
 
 int main(int argc, char **argv) {
     if (argc != 2) {
