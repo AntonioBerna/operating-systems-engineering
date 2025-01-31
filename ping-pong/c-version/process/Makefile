@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=-Wall -Wextra -Werror -pedantic -pthread
+CFLAGS=-Wall -Wextra -Werror -pedantic
 
 SRCS=./src/main.c
 TARGET=multiprocess-ping-pong
