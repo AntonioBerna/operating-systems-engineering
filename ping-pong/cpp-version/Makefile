@@ -1,5 +1,5 @@
 CC=clang++
-CFLAGS=-fsanitize=thread -Wall -Wextra -Werror -pedantic -pthread
+CFLAGS=-fsanitize=thread -Wall -Wextra -Werror -pedantic -pthread -std=c++17
 
 SRCS=./src/main.cpp
 TARGET=multithread-ping-pong
