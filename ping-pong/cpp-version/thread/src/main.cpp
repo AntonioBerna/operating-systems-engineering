@@ -12,6 +12,7 @@ std::mutex cout_mtx;
 struct ThreadData {
     std::thread thread;
     void (*start_routine)(size_t);
+    std::string message;
     std::mutex mtx;
     std::condition_variable cv;
     bool ready = false;
@@ -19,11 +20,10 @@ struct ThreadData {
 
 constexpr size_t NUM_THREADS = 2;
 static ThreadData threads[NUM_THREADS];
-constexpr const char *messages[NUM_THREADS] = { "ping", "pong" };
 
 static void worker(size_t id) {
     try {
-        const std::string msg = messages[id];
+        const std::string msg = threads[id].message;
         size_t next = (id + 1) % NUM_THREADS;
 
         for (size_t i = 0; i < iterations;) {
@@ -46,10 +46,10 @@ static void worker(size_t id) {
         }
     } catch (const std::exception &e) {
         std::lock_guard<std::mutex> cout_lock(cout_mtx);
-        std::cerr << "Exception in " << messages[id] << ": " << e.what() << "\n";
+        std::cerr << "Exception in " << threads[id].message << ": " << e.what() << "\n";
     } catch (...) {
         std::lock_guard<std::mutex> cout_lock(cout_mtx);
-        std::cerr << "Unknown exception in " << messages[id] << "\n";
+        std::cerr << "Unknown exception in " << threads[id].message << "\n";
     }
 }
 
@@ -78,7 +78,8 @@ int main(int argc, char **argv) {
 
     try {
         for (size_t i = 0; i < NUM_THREADS; ++i) {
-            threads[i].start_routine = (i & 1) == 0 ? worker : worker;
+            threads[i].start_routine = worker;
+            threads[i].message = (i == 0) ? "ping" : "pong";
         }
 
         {
